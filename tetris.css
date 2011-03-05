@@ -1,0 +1,46 @@
+body {
+   position: absolute;
+}
+
+div#screen {
+   position: absolute;
+   width:258px;
+   height:514px;
+   border: 1px solid #036;
+}
+
+div#log {
+   position absolute;
+   top: 528px;
+   left: 8px;
+   width: 258px;
+   height: 32px;
+   border: 1px solid #999;
+   background-color: #333;
+   color: #fff;
+   text-align: center;
+}
+
+/* --------------------------- */
+
+div.block {
+   position: absolute;
+   width:  32px;
+   height: 32px;
+   background-color: #69c;
+   border: 1px solid #ddd;
+}
+
+div.space {
+   position: absolute;
+   width:  32px;
+   height: 32px;
+   background-color: #eee;
+}
+
+div.current {
+   position: absolute;
+   width:  32px;
+   height: 32px;
+   background-color: #906;
+}
