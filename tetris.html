@@ -5,7 +5,6 @@
    <script src="tetris.js"></script>
    <script>
       window.onload = function() {
-         init();
          main();
       };
    </script>
@@ -14,6 +13,11 @@
    <link rel="apple-touch-icon" href="tetris.png" />
 </head>
 <body>
+<div id="control">
+   <form onsubmit="toggle(); return false">
+      <input type="submit" value="toggle" /> 
+   </form>
+</div>
 <div id="log"></div>
 <div id="screen"></div>
 </body>

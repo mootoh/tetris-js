@@ -1,42 +1,243 @@
-var screen = null;
-var blocks = [];
-var board = null;
-var H;
-var W;
-var BLOCK = 1;
+// -------------------------------------
+// Block
+// {{{
+var Block = function() {};
 
-function init_view()
-{
-   screen = document.getElementById('screen');
+Block.prototype.init = function(matrix, color) {
+   this.matrix = matrix;
+   this.color  = color;
+   return this;
+};
 
-   for (var y=0; y<H; y++) {
-      blocks[y] = [];
-      for (var x=0; x<W; x++) {
-         var block = document.createElement('div');
-         block.style.left = x * 32 + 'px';
-         block.style.top  = y * 32 + 'px';
-         screen.appendChild(block);
-         blocks[y][x] = block;
-      }
+Block.prototype.rotated = function() {
+   var mat = [];
+   var w = this.matrix[0].length;
+   var h = this.matrix.length;
+
+   for (var x=0; x<w; x++) {
+      var row = [];
+      for (var y=0; y<h; y++)
+         row[y] = this.matrix[y][w-x-1];
+      mat[x] = row;
    }
+   return mat;
+};
 
-}
+Block.prototype.rotate = function() {
+   this.matrix = this.rotated();
+   return this;
+};
 
-function print_board(board)
-{
-   for (var y=0; y<H; y++) {
-      for (var x=0; x<W; x++) {
-         if (board[y][x] == 0) {
-            blocks[y][x].className = 'space';
-         } else if (board[y][x] == 1) {
-            blocks[y][x].className = 'block';
-         } else if (board[y][x] == 2) {
-            blocks[y][x].className = 'current';
+var blocks = [
+   new Block().init([
+      [1, 1, 1, 1]
+   ], '#c00'),
+   new Block().init([
+      [1, 1],
+      [1, 1]
+   ], '#0c0'),
+   new Block().init([
+      [1, 1, 1],
+      [1, 0, 0]
+   ], '#00c'),
+   new Block().init([
+      [1, 1, 1],
+      [0, 0, 1]
+   ], '#00c'),
+   new Block().init([
+      [1, 1, 0],
+      [0, 1, 1]
+   ], '#aa0'),
+   new Block().init([
+      [0, 1, 1],
+      [1, 1, 0]
+   ], '#0aa'),
+   new Block().init([
+      [0, 1, 0],
+      [1, 1, 1]
+   ], '#0aa')
+];
+// }}}
+
+// -------------------------------------
+// User
+// {{{
+var User = function() {};
+
+User.prototype.init = function(board, bricks) {
+   this.board  = board;
+   this.bricks = bricks;
+
+   this.reset();
+   var that = this;
+
+   window.onkeypress = function(e) {
+      var e = window.event || e;
+      var kc = e.keyCode;
+      if (kc == 104) { // h
+         if (that.left_ok())
+            that.move_left();
+            draw(that.board, that.bricks, that);
+      } else if (kc == 108) { // l
+         if (that.right_ok())
+            that.move_right();
+            draw(that.board, that.bricks, that);
+      } else if (kc == 107) { // k
+         if (that.rotate_ok()) {
+            that.block.rotate();
+            draw(that.board, that.bricks, that);
+         }
+      } else if (kc == 106) {
+         if (! that.didHit(that.board)) {
+            that.move_down();
+            draw(that.board, that.bricks, that);
          }
       }
-   }
+   };
+
+   return this;
+};
+
+User.prototype.reset = function() {
+   this.x = 2;
+   this.y = 0;
+   this.block = blocks[parseInt(Math.random() * blocks.length)];
 }
 
+User.prototype.left_ok = function() {
+   var left = this.x - 1
+
+   if (left < 0) return false;
+
+   for (var y=0; y<this.block.matrix.length; y++) {
+      if (this.block.matrix[y][0] == 0)
+         continue;
+
+      if (this.board[this.y + y][left] == 1)
+         return false;
+   }
+
+   return true;
+};
+
+User.prototype.right_ok = function() {
+   var right = this.x + this.block.matrix[0].length;
+
+   if (right >= this.board[0].length) {
+      return false;
+   }
+
+   for (var y=0; y<this.block.matrix.length; y++)
+      if (this.board[this.y + y][right] == 1)
+         return false;
+
+   return true;
+};
+
+User.prototype.move_left = function() {
+   if (this.left_ok(this.board))
+      this.x -= 1;
+};
+
+User.prototype.move_right = function() {
+   if (this.right_ok(this.board))
+      this.x += 1;
+};
+
+User.prototype.move_down = function() {
+   if (this.y < this.board.length-1)
+   this.y += 1;
+};
+
+User.prototype.rotate_ok = function() {
+   var rotated = this.block.rotated();
+   for (var y=0; y<rotated.length; y++)
+      for (var x=0; x<rotated[0].length; x++)
+         if ((rotated[y][x] == 1) && this.board[this.y+y][this.x+x] == 1)
+            return false;
+   return true;
+}
+
+User.prototype.didHit = function(board) {
+   var matrix = this.block.matrix;
+
+   for (var y=0; y<matrix.length; y++)
+      for (var x=0; x<matrix[0].length; x++)
+         if ((matrix[y][x] == 1) &&
+            ((this.y + y+1) >= board.length ||
+             board[this.y + y+1][this.x + x] == 1))
+            return true;
+
+   return false;
+};
+
+User.prototype.draw = function(bricks) {
+   var matrix = this.block.matrix;
+
+   for (var y=0; y<matrix.length; y++)
+      for (var x=0; x<matrix[0].length; x++)
+         if (matrix[y][x] == 1)
+            bricks[this.y+y][this.x+x].className = 'current';
+}
+
+User.prototype.blockize = function(board, user) {
+   var matrix = this.block.matrix;
+
+   for (var y=0; y<matrix.length; y++)
+      for (var x=0; x<matrix[0].length; x++)
+         if (matrix[y][x] == 1)
+            board[this.y + y][this.x + x] = 1;
+}
+
+User.prototype.bottom = function() {
+   return this.y + this.block.matrix.length-1;
+}
+
+// }}}
+
+// -------------------------------------
+// Drawing
+// {{{
+function init_view(w, h) {
+   var bricks = []
+   var screen = document.getElementById('screen');
+
+   for (var y=0; y<h; y++) {
+      bricks[y] = [];
+      for (var x=0; x<w; x++) {
+         var brick = document.createElement('div');
+         brick.style.left = x * 32 + 'px';
+         brick.style.top  = y * 32 + 'px';
+         screen.appendChild(brick);
+         bricks[y][x] = brick;
+      }
+   }
+   return bricks;
+}
+
+function draw_board(board, bricks) {
+   for (var y=0; y<board.length; y++)
+      for (var x=0; x<board[0].length; x++)
+         //if (board[y][x] == 0) {
+            //bricks[y][x].className = 'space';
+         //} else if (board[y][x] == 1) {
+         if (board[y][x] == 1)
+            bricks[y][x].className = 'block';
+         //else if (board[y][x] == 2) {
+            //bricks[y][x].className = 'current';
+}
+
+function clear_all(w, h, bricks) {
+   for (var y=0; y<h; y++)
+      for (var x=0; x<w; x++)
+         bricks[y][x].className = 'space';
+}
+
+// }}}
+
+// -------------------------------------
+// Util
+// {{{
 var log = null;
 function show_message(msg)
 {
@@ -45,20 +246,16 @@ function show_message(msg)
    }
    log.innerHTML = msg;
 }
+// }}}
 
-function check_dropped()
-{
-   // true if the bottom of the block is close to other blocks
-}
-
-function mark_clear(bottom)
+function mark_clear(bottom, board)
 {
    var lines = [];
 
    for (var y=bottom; y>bottom-4 && y >= 0; y--) {
       var to_be_cleared = true;
 
-      for (var x=0; x<W; x++)
+      for (var x=0; x<board[0].length; x++)
          if (board[y][x] == 0) {
             to_be_cleared = false;
             break;
@@ -71,17 +268,16 @@ function mark_clear(bottom)
    return lines;
 }
 
-function clear_lines(lines)
+function clear_lines(lines, board)
 {
-   if (lines.length == 4) {
-      // TETRIS !!!!
-   }
+   if (lines.length == 4)
+      console.log('!!!! TETRIS !!!!');
 
    for (var i=0; i<lines.length; i++) {
       board.splice(lines[i], 1);
 
-      var newline = new Array(W);
-      for (var j=0; j<W; j++)
+      var newline = [];
+      for (var j=0; j<board[0].length; j++)
          newline[j] = 0;
       board.unshift(newline);
 
@@ -90,20 +286,11 @@ function clear_lines(lines)
    }
 }
 
-function clear(bottom)
+function clear(bottom, board)
 {
-   var lines = mark_clear(bottom);
-   if (lines.length > 0)
-      console.log('lines ot be cleared:' + lines);
-   clear_lines(lines);
+   var lines = mark_clear(bottom, board);
+   clear_lines(lines, board);
 }
-
-/*
-function print_board()
-{
-   console.log(board);
-}
-*/
 
 var mainInterval = null;
 
@@ -113,90 +300,45 @@ function game_over()
    clearInterval(mainInterval);
 }
 
-var current_x;
-var current_y;
-
-function new_user()
+function update(board, user)
 {
-   current_x = 2;
-   current_y = 0;
-}
-
-function hit()
-{
-   for (var i=0; i<4; i++)
-      if (board[current_y][current_x+i] != 0)
-         return true;
-   return false;
-}
-
-function blockize()
-{
-   for (var i=0; i<4; i++)
-      board[current_y][current_x+i] = 1;
-}
-
-function update()
-{
-   if (hit()) {
-      current_y--;
-      if (current_y < 0) {
+   if (user.didHit(board)) {
+      if (user.x == 2 && user.y == 0) {
          game_over();
          return;
       }
-      blockize();
-      clear(current_y);
-      new_user();
+      user.blockize(board);
+      clear(user.bottom(), board);
+      user.reset();
       return;
    }
 
-   for (var i=0; i<4; i++) {
-      if (current_y > 0)
-         board[current_y-1][current_x+i] = 0;
-      console.log('' + (current_x+i), ', ' + current_y);
-      board[current_y][current_x+i] = 2;
+   user.move_down();
+}
+
+function draw(board, bricks, user)
+{
+   clear_all(board[0].length, board.length, bricks);
+   draw_board(board, bricks);
+   user.draw(bricks);
+}
+
+var playing = false;
+function toggle(user, board, bricks)
+{
+   if (playing)
+      clearInterval(mainInterval);
+   else {
+      mainInterval = setInterval(function() {
+         update(board, user);
+         draw(board, bricks, user);
+      }, 1000);
    }
-   if (current_y < H-1)
-      current_y++;
+   playing = ! playing;
 }
 
-function main()
-{
-   new_user();
-
-   mainInterval = setInterval(function() {
-      update();
-      print_board(board);
-   }, 1000);
-}
-
-function left_ok()
-{
-   var left = current_x-1
-   return ! (left < 0 || board[current_y][left] != 0);
-}
-
-function move_left()
-{
-   board[current_y-1][current_x + 3] = 0;
-   current_x--;
-}
-
-function right_ok()
-{
-   var right = current_x+4;
-   return ! (right >= W  || board[current_y][right] != 0);
-}
-
-function move_right()
-{
-   board[current_y-1][current_x] = 0;
-   current_x++
-}
-
-function init()
-{
-   board = [
+function main() {
+   var board = [
       [0, 0, 0, 0,  0, 0, 0, 0],
       [0, 0, 0, 0,  0, 0, 0, 0],
       [0, 0, 0, 0,  0, 0, 0, 0],
@@ -209,33 +351,18 @@ function init()
 
       [0, 0, 0, 0,  0, 0, 0, 0],
       [0, 0, 0, 0,  0, 0, 0, 0],
-      [1, 1, 0, 0,  0, 0, 1, 1],
-      [1, 0, 0, 0,  0, 1, 1, 0],
+      [1, 0, 0, 0,  0, 0, 1, 0],
+      [1, 0, 0, 0,  0, 1, 1, 1],
 
-      [1, 1, 1, 0,  0, 1, 1, 0],
-      [1, 1, 1, 1,  1, 1, 1, 1],
+      [1, 1, 1, 0,  0, 1, 1, 1],
+      [1, 1, 1, 0,  1, 1, 1, 1],
       [1, 0, 1, 0,  1, 1, 0, 1],
       [1, 1, 1, 1,  1, 1, 1, 1],
    ];
 
-   H = board.length;
-   W = board[0].length;
-
-   init_view();
-
-   window.onkeypress = function(e) {
-      var e = window.event || e;
-      var kc = e.keyCode;
-      if (kc == 104) { // h
-         console.log('left');
-         if (left_ok()) {
-            move_left();
-         }
-      } else if (kc == 108) { // l or ->
-         console.log('right');
-         if (right_ok()) {
-            move_right();
-         }
-      }
-   };
+   var bricks = init_view(board[0].length, board.length);
+   var user = new User().init(board, bricks);
+   toggle(user, board, bricks);
 }
+
+// vim:set fdm=marker:
